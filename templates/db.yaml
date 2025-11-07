@@ -1,17 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: RDS MySQL in private subnets for 3-tier CI/CD project
+Description: RDS MySQL in private subnets for 3-tier CI/CD project (using Secrets Manager)
 
 Parameters:
   EnvName:
     Type: String
     AllowedValues: [DEV, PROD]
-  DBUser:
-    Type: String
-    Default: appuser
-  DBPassword:
-    Type: String
-    NoEcho: true
-    MinLength: 8
   DBName:
     Type: String
     Default: appdb
@@ -53,9 +46,9 @@ Resources:
       DBInstanceClass: db.t3.micro
       Engine: mysql
       EngineVersion: "8.0.39"
-      MasterUsername: !Ref DBUser
-      MasterUserPassword: !Ref DBPassword
       DBName: !Ref DBName
+      MasterUsername: !Sub "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:password}}"
       VPCSecurityGroups:
         - !Ref DbSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
