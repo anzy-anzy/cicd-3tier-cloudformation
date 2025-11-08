@@ -47,8 +47,11 @@ Resources:
       Engine: mysql
       EngineVersion: "8.0.39"
       DBName: !Ref DBName
-      MasterUsername: !Sub "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:username}}"
-      MasterUserPassword: !Sub "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:password}}"
+
+      # 🔐 Pull credentials dynamically based on EnvName (myapp-DEV-dbcredentials / myapp-PROD-dbcredentials)
+      MasterUsername: !Sub "{{resolve:secretsmanager:myapp-${EnvName}-dbcredentials:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:myapp-${EnvName}-dbcredentials:SecretString:password}}"
+
       VPCSecurityGroups:
         - !Ref DbSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
@@ -67,4 +70,3 @@ Outputs:
     Value: !GetAtt MyDBInstance.Endpoint.Address
     Export:
       Name: !Sub '${EnvName}-DbEndpoint'
-
