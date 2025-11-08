@@ -19,9 +19,20 @@ phases:
     commands:
       - echo "Validating CloudFormation templates..."
       - for template in templates/*.yaml; do
-          echo "Validating $template";
-          aws cloudformation validate-template --template-body file://$template || exit 1;
+          if [ -f "$template" ]; then
+            echo "Validating $template";
+            aws cloudformation validate-template --template-body file://$template || exit 1;
+          fi;
         done
+
+      # Add this fallback if 'templates/' doesn’t exist
+      - for template in *.yaml; do
+          if [ -f "$template" ]; then
+            echo "Validating $template";
+            aws cloudformation validate-template --template-body file://$template || exit 1;
+          fi;
+        done
+
       - echo "All templates validated successfully."
 
   post_build:
