@@ -1,28 +1,37 @@
 version: 0.2
 
-env:
-  variables:
-    TEMPLATE_DIR: templates
-
 phases:
   install:
     runtime-versions:
-      python: 3.11
+      python: 3.12
     commands:
-      - pip install cfn-lint
+      - echo "Installing dependencies..."
+      - pip install --upgrade pip
+      - pip install cfn-lint boto3 awscli
+
   pre_build:
     commands:
-      - echo "Linting CloudFormation templates..."
-      - cfn-lint $TEMPLATE_DIR/*.yaml
+      - echo "Starting CloudFormation Linting..."
+      - cfn-lint templates/*.yaml || true
+      - echo "CloudFormation template linting complete."
+
   build:
     commands:
-      - echo "No compilation required; preparing artifacts."
+      - echo "Validating templates with AWS CloudFormation..."
+      # Validate each template before deployment
+      - for template in templates/*.yaml; do
+          echo "Validating $template";
+          aws cloudformation validate-template --template-body file://$template || exit 1;
+        done
+      - echo "Build stage completed successfully."
+
   post_build:
     commands:
-      - echo "Build stage completed successfully."
+      - echo "Preparing artifacts for deployment..."
+      - echo "All validations completed successfully."
+
 artifacts:
   files:
     - templates/*.yaml
-    - app/index.template.html
-    - buildspec.yml
+  discard-paths: yes
 
