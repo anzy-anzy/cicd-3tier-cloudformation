@@ -1,118 +1,88 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Custom VPC for 3-tier demo (2 AZs, public+private, IGW, NAT)
+Description: VPC setup for 3-tier CI/CD project
 
 Parameters:
   EnvName:
     Type: String
     AllowedValues: [DEV, PROD]
-  VpcCidr:
-    Type: String
-    Default: 10.20.0.0/16
-
-Mappings:
-  Cidrs:
-    a: { Pub: 10.20.0.0/24,  Priv: 10.20.10.0/24 }
-    b: { Pub: 10.20.1.0/24,  Priv: 10.20.11.0/24 }
 
 Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: !Ref VpcCidr
-      EnableDnsHostnames: true
+      CidrBlock: 10.20.0.0/16
       EnableDnsSupport: true
-      Tags: [{ Key: Name, Value: !Sub '${EnvName}-vpc' }]
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvName}-vpc'
 
-  IGW:
+  InternetGateway:
     Type: AWS::EC2::InternetGateway
-  IGWAttach:
+
+  AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref VPC
-      InternetGatewayId: !Ref IGW
+      InternetGatewayId: !Ref InternetGateway
 
-  PubA:
+  PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !FindInMap [Cidrs, a, Pub]
-      MapPublicIpOnLaunch: true
+      CidrBlock: 10.20.1.0/24
       AvailabilityZone: !Select [0, !GetAZs '']
-      Tags: [{ Key: Name, Value: !Sub '${EnvName}-pub-a' }]
-  PubB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: !FindInMap [Cidrs, b, Pub]
       MapPublicIpOnLaunch: true
-      AvailabilityZone: !Select [1, !GetAZs '']
-      Tags: [{ Key: Name, Value: !Sub '${EnvName}-pub-b' }]
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvName}-public-subnet-1'
 
-  PrivA:
+  PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !FindInMap [Cidrs, a, Priv]
+      CidrBlock: 10.20.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvName}-public-subnet-2'
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.20.3.0/24
       AvailabilityZone: !Select [0, !GetAZs '']
-      Tags: [{ Key: Name, Value: !Sub '${EnvName}-priv-a' }]
-  PrivB:
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvName}-private-subnet-1'
+
+  PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !FindInMap [Cidrs, b, Priv]
+      CidrBlock: 10.20.4.0/24
       AvailabilityZone: !Select [1, !GetAZs '']
-      Tags: [{ Key: Name, Value: !Sub '${EnvName}-priv-b' }]
-
-  PubRT:
-    Type: AWS::EC2::RouteTable
-    Properties: { VpcId: !Ref VPC }
-  PubRTIgw:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PubRT
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref IGW
-  PubAssocA:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties: { SubnetId: !Ref PubA, RouteTableId: !Ref PubRT }
-  PubAssocB:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties: { SubnetId: !Ref PubB, RouteTableId: !Ref PubRT }
-
-  EipNat:
-    Type: AWS::EC2::EIP
-    Properties: { Domain: vpc }
-  Nat:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt EipNat.AllocationId
-      SubnetId: !Ref PubA
-      Tags: [{ Key: Name, Value: !Sub '${EnvName}-nat' }]
-
-  PrivRT:
-    Type: AWS::EC2::RouteTable
-    Properties: { VpcId: !Ref VPC }
-  PrivRTNat:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivRT
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref Nat
-  PrivAssocA:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties: { SubnetId: !Ref PrivA, RouteTableId: !Ref PrivRT }
-  PrivAssocB:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties: { SubnetId: !Ref PrivB, RouteTableId: !Ref PrivRT }
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvName}-private-subnet-2'
 
 Outputs:
   VpcId:
+    Description: The VPC ID
     Value: !Ref VPC
-    Export: { Name: !Sub '${EnvName}-VpcId' }
-  PubSubnets:
-    Value: !Join [",", [!Ref PubA, !Ref PubB]]
-    Export: { Name: !Sub '${EnvName}-PubSubnets' }
-  PrivSubnets:
-    Value: !Join [",", [!Ref PrivA, !Ref PrivB]]
-    Export: { Name: !Sub '${EnvName}-PrivSubnets' }
+    Export:
+      Name: !Sub '${EnvName}-VpcId'
 
+  PrivSubnets:
+    Description: Comma-separated private subnet IDs
+    Value: !Join [",", [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
+    Export:
+      Name: !Sub '${EnvName}-PrivSubnets'
+
+  PubSubnets:
+    Description: Comma-separated public subnet IDs
+    Value: !Join [",", [!Ref PublicSubnet1, !Ref PublicSubnet2]]
+    Export:
+      Name: !Sub '${EnvName}-PubSubnets'
