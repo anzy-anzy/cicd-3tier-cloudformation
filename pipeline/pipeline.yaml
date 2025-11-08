@@ -168,11 +168,11 @@ Resources:
                 Provider: CloudFormation
                 Version: 1
               InputArtifacts:
-                - Name: SourceArtifact
+                - Name: BuildArtifact   # ✅ fixed from SourceArtifact
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${ProjectName}-dev"
-                TemplatePath: SourceArtifact::templates/db.yaml
+                TemplatePath: BuildArtifact::templates/db.yaml  # ✅ fixed from SourceArtifact
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: |
                   {
@@ -203,11 +203,11 @@ Resources:
                 Provider: CloudFormation
                 Version: 1
               InputArtifacts:
-                - Name: SourceArtifact
+                - Name: BuildArtifact   # ✅ fixed
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${ProjectName}-prod"
-                TemplatePath: SourceArtifact::templates/db.yaml
+                TemplatePath: BuildArtifact::templates/db.yaml  # ✅ fixed
                 Capabilities: CAPABILITY_IAM
                 ParameterOverrides: |
                   {
