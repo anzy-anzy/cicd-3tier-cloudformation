@@ -18,7 +18,7 @@ Resources:
     Properties:
       GroupDescription: Allow HTTP and DB access
       VpcId: !ImportValue
-        'Fn::Sub': '${EnvName}-VpcId'
+        Fn::Sub: "${EnvName}-VpcId"
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -30,19 +30,19 @@ Resources:
           CidrIp: 10.20.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub '${EnvName}-app-sg'
+          Value: !Sub "${EnvName}-app-sg"
 
   AppInstance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref LatestAmiId
       InstanceType: t3.micro
-      SubnetId: !Select
+      SubnetId: !Select 
         - 0
-        - !Split
+        - !Split 
           - ","
-          - !ImportValue
-            !Sub "${EnvName}-PubSubnets"
+          - !ImportValue 
+              Fn::Sub: "${EnvName}-PubSubnets"
       SecurityGroupIds:
         - !Ref AppSecurityGroup
       KeyName: mykeypair
@@ -56,7 +56,7 @@ Resources:
           echo "<h1>${EnvName} Web App connected to DB: $(aws secretsmanager get-secret-value --secret-id myapp/dbcredentials --query SecretString --output text)</h1>" > /usr/share/nginx/html/index.html
       Tags:
         - Key: Name
-          Value: !Sub '${EnvName}-app-instance'
+          Value: !Sub "${EnvName}-app-instance"
 
 Outputs:
   AppInstanceId:
