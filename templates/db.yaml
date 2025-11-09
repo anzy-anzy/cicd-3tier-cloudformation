@@ -18,7 +18,7 @@ Resources:
     Properties:
       GroupDescription: Allow MySQL access within VPC
       VpcId: !ImportValue
-        'Fn::Sub': '${EnvName}-VpcId'
+        Fn::Sub: '${EnvName}-VpcId'
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 3306
@@ -32,11 +32,10 @@ Resources:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: Private subnets for RDS instance
-      SubnetIds:
-        !Split
-          - ","
-          - !ImportValue
-            'Fn::Sub': '${EnvName}-PrivSubnets'
+      SubnetIds: !Split
+        - ","
+        - !ImportValue
+          Fn::Sub: '${EnvName}-PrivSubnets'
       Tags:
         - Key: Name
           Value: !Sub '${EnvName}-db-subnet-group'
@@ -50,8 +49,8 @@ Resources:
       Engine: mysql
       EngineVersion: "8.0.39"
       DBName: !Ref DBName
-      MasterUsername: !Sub "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:username}}"
-      MasterUserPassword: !Sub "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:password}}"
+      MasterUsername: "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:username}}"
+      MasterUserPassword: "{{resolve:secretsmanager:myapp/dbcredentials:SecretString:password}}"
       VPCSecurityGroups:
         - !Ref DbSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
