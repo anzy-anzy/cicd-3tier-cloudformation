@@ -112,6 +112,9 @@ Resources:
   #############################################
   CICDPipeline:
     Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - CodePipelineRole
+      - CodeBuildRole
     Properties:
       Name: !Sub "${ProjectName}-pipeline-v2"
       RoleArn: !GetAtt CodePipelineRole.Arn
