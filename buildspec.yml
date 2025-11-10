@@ -21,13 +21,13 @@ phases:
 
   post_build:
     commands:
-      - echo "Preparing artifacts for deployment..."
-      - mkdir -p output
-      - cp templates/*.yaml output/
+      - echo "Packaging templates into output directory..."
+      - mkdir -p output/templates
+      - cp templates/*.yaml output/templates/
       - echo "Build completed successfully."
 
 artifacts:
   files:
-    - '*.yaml'
+    - '**/*'
   base-directory: output
-  discard-paths: yes
+  discard-paths: no
