@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Full CI/CD Pipeline for 3-tier CloudFormation app using Secrets Manager (VPC → DB → APP)
+Description: Full CI/CD Pipeline for 3-tier CloudFormation app using Secrets Manager (VPC → APP → DB)
 
 Parameters:
   GitHubOwner:
@@ -94,7 +94,7 @@ Resources:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: !Sub "${ProjectName}-build"
-      Description: "Lint and validate CloudFormation templates"
+      Description: "Validate CloudFormation templates"
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Artifacts:
         Type: CODEPIPELINE
@@ -175,7 +175,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${ProjectName}-vpc"
-                TemplatePath: BuildArtifact::templates/vpc.yaml
+                TemplatePath: BuildArtifact::vpc.yaml
                 Capabilities: CAPABILITY_IAM
                 RoleArn: !GetAtt CodePipelineRole.Arn
                 ParameterOverrides: |
@@ -184,7 +184,31 @@ Resources:
                   }
 
         #####################################
-        # Deploy DB Stack
+        # Deploy APP Stack (comes before DB)
+        #####################################
+        - Name: DeployApp
+          Actions:
+            - Name: DeployAppStack
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              InputArtifacts:
+                - Name: BuildArtifact
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: !Sub "${ProjectName}-app"
+                TemplatePath: BuildArtifact::app.yaml
+                Capabilities: CAPABILITY_IAM
+                RoleArn: !GetAtt CodePipelineRole.Arn
+                ParameterOverrides: |
+                  {
+                    "EnvName": "DEV"
+                  }
+
+        #####################################
+        # Deploy DB Stack (after APP)
         #####################################
         - Name: DeployDB
           Actions:
@@ -199,7 +223,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${ProjectName}-db"
-                TemplatePath: BuildArtifact::templates/db.yaml
+                TemplatePath: BuildArtifact::db.yaml
                 Capabilities: CAPABILITY_IAM
                 RoleArn: !GetAtt CodePipelineRole.Arn
                 ParameterOverrides: |
@@ -218,30 +242,6 @@ Resources:
                 Owner: AWS
                 Provider: Manual
                 Version: 1
-
-        #####################################
-        # Deploy APP Stack
-        #####################################
-        - Name: DeployApp
-          Actions:
-            - Name: DeployAppStack
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: CloudFormation
-                Version: 1
-              InputArtifacts:
-                - Name: BuildArtifact
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                StackName: !Sub "${ProjectName}-app"
-                TemplatePath: BuildArtifact::templates/app.yaml
-                Capabilities: CAPABILITY_IAM
-                RoleArn: !GetAtt CodePipelineRole.Arn
-                ParameterOverrides: |
-                  {
-                    "EnvName": "DEV"
-                  }
 
 Outputs:
   PipelineName:
