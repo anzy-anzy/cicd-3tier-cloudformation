@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Full CI/CD Pipeline for 3-tier CloudFormation app using Secrets Manager (VPC → APP → DB)
+Description: Full CI/CD Pipeline for 3-tier CloudFormation app (using existing custom VPC)
 
 Parameters:
   GitHubOwner:
@@ -38,7 +38,9 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: codepipeline.amazonaws.com
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
             Action: sts:AssumeRole
       Policies:
         - PolicyName: CodePipelineFullAccess
@@ -94,7 +96,7 @@ Resources:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: !Sub "${ProjectName}-build"
-      Description: "Validate CloudFormation templates"
+      Description: "Validate and package CloudFormation templates"
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Artifacts:
         Type: CODEPIPELINE
@@ -160,55 +162,7 @@ Resources:
                 ProjectName: !Ref CodeBuildProject
 
         #####################################
-        # Deploy VPC Stack
-        #####################################
-        - Name: DeployVPC
-          Actions:
-            - Name: DeployVPCStack
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: CloudFormation
-                Version: 1
-              InputArtifacts:
-                - Name: BuildArtifact
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                StackName: !Sub "${ProjectName}-vpc"
-                TemplatePath: BuildArtifact::vpc.yaml
-                Capabilities: CAPABILITY_IAM
-                RoleArn: !GetAtt CodePipelineRole.Arn
-                ParameterOverrides: |
-                  {
-                    "EnvName": "DEV"
-                  }
-
-        #####################################
-        # Deploy APP Stack (comes before DB)
-        #####################################
-        - Name: DeployApp
-          Actions:
-            - Name: DeployAppStack
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Provider: CloudFormation
-                Version: 1
-              InputArtifacts:
-                - Name: BuildArtifact
-              Configuration:
-                ActionMode: CREATE_UPDATE
-                StackName: !Sub "${ProjectName}-app"
-                TemplatePath: BuildArtifact::app.yaml
-                Capabilities: CAPABILITY_IAM
-                RoleArn: !GetAtt CodePipelineRole.Arn
-                ParameterOverrides: |
-                  {
-                    "EnvName": "DEV"
-                  }
-
-        #####################################
-        # Deploy DB Stack (after APP)
+        # Deploy DB Stack
         #####################################
         - Name: DeployDB
           Actions:
@@ -222,8 +176,8 @@ Resources:
                 - Name: BuildArtifact
               Configuration:
                 ActionMode: CREATE_UPDATE
-                StackName: !Sub "${ProjectName}-db"
-                TemplatePath: BuildArtifact::db.yaml
+                StackName: db-stack
+                TemplatePath: BuildArtifact::templates/db.yaml
                 Capabilities: CAPABILITY_IAM
                 RoleArn: !GetAtt CodePipelineRole.Arn
                 ParameterOverrides: |
@@ -242,6 +196,30 @@ Resources:
                 Owner: AWS
                 Provider: Manual
                 Version: 1
+
+        #####################################
+        # Deploy APP Stack
+        #####################################
+        - Name: DeployApp
+          Actions:
+            - Name: DeployAppStack
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              InputArtifacts:
+                - Name: BuildArtifact
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: app-stack
+                TemplatePath: BuildArtifact::templates/app.yaml
+                Capabilities: CAPABILITY_IAM
+                RoleArn: !GetAtt CodePipelineRole.Arn
+                ParameterOverrides: |
+                  {
+                    "EnvName": "DEV"
+                  }
 
 Outputs:
   PipelineName:
