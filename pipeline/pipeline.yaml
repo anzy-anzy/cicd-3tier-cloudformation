@@ -59,6 +59,8 @@ Resources:
                   - ssm:GetParametersByPath
                   - rds:DescribeDBInstances
                   - ec2:DescribeKeyPairs
+                  - rds:DescribeDBSubnetGroups
+                  - ec2:DescribeSecurityGroups
                 Resource: "*"
 
   #############################################
