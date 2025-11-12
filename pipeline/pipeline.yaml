@@ -20,20 +20,19 @@ Parameters:
     Type: String
     Default: cicd-pipeline-stack
 
+  # NEW: pass the us-west-2 artifact bucket name that already exists in us-west-2
+  ArtifactBucketWestName:
+    Type: String
+    Description: Name of the *existing* S3 bucket in us-west-2 to use for cross-region artifacts (must physically live in us-west-2)
+
 Resources:
   #############################################
-  # S3 Buckets for Artifacts (auto-unique)
+  # S3 Bucket for Artifacts (east only; created by this stack)
   #############################################
   ArtifactBucketEast:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub '${AWS::AccountId}-${ProjectName}-us-east-1-artifacts'
-    DeletionPolicy: Retain
-
-  ArtifactBucketWest:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub '${AWS::AccountId}-${ProjectName}-us-west-2-artifacts'
     DeletionPolicy: Retain
 
   #############################################
@@ -69,8 +68,8 @@ Resources:
                   - ssm:GetParameters
                   - ssm:GetParametersByPath
                   - rds:DescribeDBInstances
-                  - ec2:DescribeKeyPairs
                   - rds:DescribeDBSubnetGroups
+                  - ec2:DescribeKeyPairs
                   - ec2:DescribeSecurityGroups
                 Resource: "*"
 
@@ -140,11 +139,9 @@ Resources:
         - Region: us-west-2
           ArtifactStore:
             Type: S3
-            Location: !Ref ArtifactBucketWest
+            # Use the pre-existing bucket in us-west-2
+            Location: !Ref ArtifactBucketWestName
       Stages:
-        #####################################
-        # Source Stage
-        #####################################
         - Name: Source
           Actions:
             - Name: SourceAction
@@ -161,9 +158,6 @@ Resources:
                 Branch: !Ref GitHubBranch
                 OAuthToken: !Ref GitHubToken
 
-        #####################################
-        # Build Stage
-        #####################################
         - Name: Build
           Actions:
             - Name: BuildAction
@@ -179,9 +173,6 @@ Resources:
               Configuration:
                 ProjectName: !Ref CodeBuildProject
 
-        #####################################
-        # Deploy DEV (us-east-1)
-        #####################################
         - Name: DeployDev
           Actions:
             - Name: DeployDBDev
@@ -198,8 +189,7 @@ Resources:
                 StackName: dev-db-stack
                 TemplatePath: BuildArtifact::templates/db.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
-                ParameterOverrides: |
-                  {"EnvName": "DEV"}
+                ParameterOverrides: '{"EnvName":"DEV"}'
 
             - Name: DeployAppDev
               ActionTypeId:
@@ -215,12 +205,8 @@ Resources:
                 StackName: dev-app-stack
                 TemplatePath: BuildArtifact::templates/app.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
-                ParameterOverrides: |
-                  {"EnvName": "DEV"}
+                ParameterOverrides: '{"EnvName":"DEV"}'
 
-        #####################################
-        # Manual Approval
-        #####################################
         - Name: ManualApproval
           Actions:
             - Name: ApproveForProd
@@ -230,9 +216,6 @@ Resources:
                 Provider: Manual
                 Version: 1
 
-        #####################################
-        # Deploy PROD (us-west-2)
-        #####################################
         - Name: DeployProd
           Actions:
             - Name: DeployDBProd
@@ -249,8 +232,7 @@ Resources:
                 StackName: prod-db-stack
                 TemplatePath: BuildArtifact::templates/db.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
-                ParameterOverrides: |
-                  {"EnvName": "PROD"}
+                ParameterOverrides: '{"EnvName":"PROD"}'
 
             - Name: DeployAppProd
               ActionTypeId:
@@ -266,8 +248,7 @@ Resources:
                 StackName: prod-app-stack
                 TemplatePath: BuildArtifact::templates/app.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
-                ParameterOverrides: |
-                  {"EnvName": "PROD"}
+                ParameterOverrides: '{"EnvName":"PROD"}'
 
 Outputs:
   PipelineName:
