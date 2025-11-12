@@ -50,7 +50,7 @@ Resources:
     UpdateReplacePolicy: Retain
 
   #############################################
-  # IAM Role for CodePipeline (us-east-1)
+  # Single IAM Role for CodePipeline
   #############################################
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -67,44 +67,6 @@ Resources:
             Action: sts:AssumeRole
       Policies:
         - PolicyName: CodePipelineFullAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:*
-                  - codebuild:*
-                  - cloudformation:*
-                  - cloudformation:DescribeStacks
-                  - iam:PassRole
-                  - secretsmanager:GetSecretValue
-                  - ssm:GetParameter
-                  - ssm:GetParameters
-                  - ssm:GetParametersByPath
-                  - rds:DescribeDBInstances
-                  - rds:DescribeDBSubnetGroups
-                  - ec2:DescribeKeyPairs
-                  - ec2:DescribeSecurityGroups
-                Resource: "*"
-
-  #############################################
-  # IAM Role for CodePipeline (us-west-2)
-  #############################################
-  CodePipelineRoleWest:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "${ProjectName}-CodePipelineRoleWest"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codepipeline.amazonaws.com
-                - cloudformation.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: CodePipelineFullAccessWest
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -288,7 +250,7 @@ Resources:
               Region: us-west-2
               Configuration:
                 ActionMode: CREATE_UPDATE
-                RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/${ProjectName}-CodePipelineRoleWest"
+                RoleArn: !GetAtt CodePipelineRole.Arn
                 StackName: prod-db-stack
                 TemplatePath: BuildArtifact::templates/db.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
@@ -305,7 +267,7 @@ Resources:
               Region: us-west-2
               Configuration:
                 ActionMode: CREATE_UPDATE
-                RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/${ProjectName}-CodePipelineRoleWest"
+                RoleArn: !GetAtt CodePipelineRole.Arn
                 StackName: prod-app-stack
                 TemplatePath: BuildArtifact::templates/app.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
