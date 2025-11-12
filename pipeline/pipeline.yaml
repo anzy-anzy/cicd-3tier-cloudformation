@@ -85,6 +85,7 @@ Resources:
                   - rds:DescribeDBSubnetGroups
                   - ec2:DescribeKeyPairs
                   - ec2:DescribeSecurityGroups
+                  - ec2:DescribeImages
                 Resource: "*"
 
   #############################################
