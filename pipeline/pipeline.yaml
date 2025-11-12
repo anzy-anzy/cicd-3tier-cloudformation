@@ -20,7 +20,6 @@ Parameters:
     Type: String
     Default: cicd-pipeline-stack
 
-  # New: optional, pass existing artifact bucket names to reuse
   ArtifactBucketEastName:
     Type: String
     Default: ""
@@ -43,17 +42,15 @@ Resources:
     Condition: CreateEastBucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
-    Properties: {}  # let CFN pick a unique name
 
   ArtifactBucketWest:
     Type: AWS::S3::Bucket
     Condition: CreateWestBucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
-    Properties: {}  # let CFN pick a unique name
 
   #############################################
-  # IAM Role for CodePipeline
+  # IAM Role for CodePipeline (us-east-1)
   #############################################
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -70,6 +67,44 @@ Resources:
             Action: sts:AssumeRole
       Policies:
         - PolicyName: CodePipelineFullAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                  - codebuild:*
+                  - cloudformation:*
+                  - cloudformation:DescribeStacks
+                  - iam:PassRole
+                  - secretsmanager:GetSecretValue
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                  - rds:DescribeDBInstances
+                  - rds:DescribeDBSubnetGroups
+                  - ec2:DescribeKeyPairs
+                  - ec2:DescribeSecurityGroups
+                Resource: "*"
+
+  #############################################
+  # IAM Role for CodePipeline (us-west-2)
+  #############################################
+  CodePipelineRoleWest:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-CodePipelineRoleWest"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodePipelineFullAccessWest
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -253,7 +288,7 @@ Resources:
               Region: us-west-2
               Configuration:
                 ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CodePipelineRole.Arn
+                RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/${ProjectName}-CodePipelineRoleWest"
                 StackName: prod-db-stack
                 TemplatePath: BuildArtifact::templates/db.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
@@ -270,7 +305,7 @@ Resources:
               Region: us-west-2
               Configuration:
                 ActionMode: CREATE_UPDATE
-                RoleArn: !GetAtt CodePipelineRole.Arn
+                RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/${ProjectName}-CodePipelineRoleWest"
                 StackName: prod-app-stack
                 TemplatePath: BuildArtifact::templates/app.yaml
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
