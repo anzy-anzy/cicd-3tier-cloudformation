@@ -7,15 +7,19 @@ Parameters:
   GitHubOwner:
     Type: String
     Default: anzy-anzy
+
   GitHubRepo:
     Type: String
     Default: cicd-3tier-cloudformation
+
   GitHubBranch:
     Type: String
     Default: main
+
   GitHubToken:
     Type: String
     NoEcho: true
+
   ProjectName:
     Type: String
     Default: cicd-pipeline-stack
@@ -24,6 +28,7 @@ Parameters:
     Type: String
     Default: ""
     Description: "(optional) Existing S3 bucket name in us-east-1 for CodePipeline artifacts"
+
   ArtifactBucketWestName:
     Type: String
     Default: ""
@@ -34,6 +39,7 @@ Conditions:
   CreateWestBucket: !Equals [!Ref ArtifactBucketWestName, ""]
 
 Resources:
+
   #############################################
   # S3 Buckets for Artifacts (only if needed)
   #############################################
@@ -50,7 +56,7 @@ Resources:
     UpdateReplacePolicy: Retain
 
   #############################################
-  # Single IAM Role for CodePipeline
+  # IAM Role for CodePipeline
   #############################################
   CodePipelineRole:
     Type: AWS::IAM::Role
@@ -65,6 +71,7 @@ Resources:
                 - codepipeline.amazonaws.com
                 - cloudformation.amazonaws.com
             Action: sts:AssumeRole
+
       Policies:
         - PolicyName: CodePipelineFullAccess
           PolicyDocument:
@@ -76,6 +83,7 @@ Resources:
                   - codebuild:*
                   - cloudformation:*
                   - cloudformation:DescribeStacks
+                  - cloudformation:ValidateTemplate
                   - iam:PassRole
                   - secretsmanager:GetSecretValue
                   - ssm:GetParameter
@@ -83,9 +91,10 @@ Resources:
                   - ssm:GetParametersByPath
                   - rds:DescribeDBInstances
                   - rds:DescribeDBSubnetGroups
+                  - ec2:DescribeInstances
+                  - ec2:DescribeImages
                   - ec2:DescribeKeyPairs
                   - ec2:DescribeSecurityGroups
-                  - ec2:DescribeImages
                 Resource: "*"
 
   #############################################
@@ -102,6 +111,7 @@ Resources:
             Principal:
               Service: codebuild.amazonaws.com
             Action: sts:AssumeRole
+
       Policies:
         - PolicyName: CodeBuildInlinePolicy
           PolicyDocument:
@@ -146,6 +156,7 @@ Resources:
     Properties:
       Name: !Sub "${ProjectName}-multi-region-pipeline"
       RoleArn: !GetAtt CodePipelineRole.Arn
+
       ArtifactStores:
         - Region: us-east-1
           ArtifactStore:
@@ -154,6 +165,7 @@ Resources:
               - CreateEastBucket
               - !Ref ArtifactBucketEast
               - !Ref ArtifactBucketEastName
+
         - Region: us-west-2
           ArtifactStore:
             Type: S3
@@ -161,7 +173,12 @@ Resources:
               - CreateWestBucket
               - !Ref ArtifactBucketWest
               - !Ref ArtifactBucketWestName
+
       Stages:
+
+        #######################
+        # SOURCE
+        #######################
         - Name: Source
           Actions:
             - Name: SourceAction
@@ -178,6 +195,9 @@ Resources:
                 Branch: !Ref GitHubBranch
                 OAuthToken: !Ref GitHubToken
 
+        #######################
+        # BUILD
+        #######################
         - Name: Build
           Actions:
             - Name: BuildAction
@@ -193,8 +213,12 @@ Resources:
               Configuration:
                 ProjectName: !Ref CodeBuildProject
 
+        #######################
+        # DEPLOY DEV (us-east-1)
+        #######################
         - Name: DeployDev
           Actions:
+
             - Name: DeployDBDev
               ActionTypeId:
                 Category: Deploy
@@ -229,6 +253,9 @@ Resources:
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
                 ParameterOverrides: '{"EnvName":"DEV"}'
 
+        #######################
+        # MANUAL APPROVAL
+        #######################
         - Name: ManualApproval
           Actions:
             - Name: ApproveForProd
@@ -238,8 +265,12 @@ Resources:
                 Provider: Manual
                 Version: 1
 
+        #######################
+        # DEPLOY PROD (us-west-2)
+        #######################
         - Name: DeployProd
           Actions:
+
             - Name: DeployDBProd
               ActionTypeId:
                 Category: Deploy

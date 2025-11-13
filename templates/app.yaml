@@ -16,13 +16,21 @@ Parameters:
 
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
-    Default: mykeypair   # <-- Update this to match your EC2 Key Pair name
+    Default: mykeypair
     Description: EC2 Key Pair name for SSH access
 
   AmiId:
     Type: AWS::EC2::Image::Id
     Default: ami-06dd5c911c0d8dcdc
     Description: Amazon Linux 2 AMI (update if needed for your region)
+
+  # -------------------------------------------
+  # NEW: Dummy parameter to force stack updates
+  # -------------------------------------------
+  ForceUpdate:
+    Type: String
+    Default: "1"
+    Description: Forces CloudFormation to detect updates
 
 Resources:
   # --------------------------------------------------------
@@ -67,6 +75,8 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${EnvName}-AppServer"
+        - Key: ForceUpdate
+          Value: !Ref ForceUpdate   # <-- ensures instance always updates
 
 Outputs:
   AppInstanceId:
