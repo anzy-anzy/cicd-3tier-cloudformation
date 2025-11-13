@@ -12,30 +12,32 @@ Parameters:
   InstanceType:
     Type: String
     Default: t3.micro
-    Description: EC2 instance type for the app servers
 
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Default: mykeypair
-    Description: EC2 Key Pair name for SSH access
 
   AmiId:
-    Type: AWS::EC2::Image::Id
-    Default: ami-04f9aa2b7c7091927
-    Description: Amazon Linux 2 AMI (update if needed for your region)
+    Type: String
+    Default: ""
+    Description: "Leave empty — automatic AMI mapping will select correct AMI"
 
-  # -------------------------------------------
-  # NEW: Dummy parameter to force stack updates
-  # -------------------------------------------
   ForceUpdate:
     Type: String
     Default: "1"
-    Description: Forces CloudFormation to detect updates
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-06dd5c911c0d8dcdc
+    us-west-2:
+      AMI: ami-04f9aa2b7c7091927
+
+Conditions:
+  UseProvidedAmi: !Not [!Equals [!Ref AmiId, ""]]
 
 Resources:
-  # --------------------------------------------------------
-  # Security Group for EC2 Instances
-  # --------------------------------------------------------
+
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -55,14 +57,14 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvName}-AppSecurityGroup"
 
-  # --------------------------------------------------------
-  # EC2 Instance for Application Tier
-  # --------------------------------------------------------
   AppInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
-      ImageId: !Ref AmiId
+      ImageId: !If
+        - UseProvidedAmi
+        - !Ref AmiId
+        - !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       KeyName: !Ref KeyName
       SubnetId: !Select
         - 0
@@ -76,23 +78,20 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvName}-AppServer"
         - Key: ForceUpdate
-          Value: !Ref ForceUpdate   # <-- ensures instance always updates
+          Value: !Ref ForceUpdate
 
 Outputs:
   AppInstanceId:
-    Description: EC2 Instance ID
     Value: !Ref AppInstance
     Export:
       Name: !Sub "${EnvName}-AppInstanceId"
 
   AppSecurityGroupId:
-    Description: Security Group ID for App Server
     Value: !Ref AppSecurityGroup
     Export:
       Name: !Sub "${EnvName}-AppSecurityGroupId"
 
   PublicSubnetUsed:
-    Description: The subnet where EC2 was launched
     Value: !Select
       - 0
       - !Split
