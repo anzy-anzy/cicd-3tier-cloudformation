@@ -38,6 +38,9 @@ Conditions:
 
 Resources:
 
+  ##############################################
+  # Security Group
+  ##############################################
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -57,6 +60,9 @@ Resources:
         - Key: Name
           Value: !Sub "${EnvName}-AppSecurityGroup"
 
+  ##############################################
+  # EC2 Instance
+  ##############################################
   AppInstance:
     Type: AWS::EC2::Instance
     Properties:
@@ -74,6 +80,22 @@ Resources:
               Fn::Sub: "${EnvName}-PublicSubnets"
       SecurityGroupIds:
         - !Ref AppSecurityGroup
+
+      ##############################################
+      # UserData: installs Apache & deploys webpage
+      ##############################################
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+
+          systemctl start httpd
+          systemctl enable httpd
+
+          # Simple default page
+          echo "<h1>Welcome to ${EnvName} Application Server!</h1>" > /var/www/html/index.html
+
       Tags:
         - Key: Name
           Value: !Sub "${EnvName}-AppServer"
