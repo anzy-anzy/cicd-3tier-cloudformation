@@ -21,7 +21,7 @@ Parameters:
 
   AmiId:
     Type: AWS::EC2::Image::Id
-    Default: ami-06dd5c911c0d8dcdc
+    Default: ami-04f9aa2b7c7091927
     Description: Amazon Linux 2 AMI (update if needed for your region)
 
   # -------------------------------------------
