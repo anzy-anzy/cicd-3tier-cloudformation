@@ -17,12 +17,17 @@ phases:
 
   build:
     commands:
-      - echo "Packaging application files..."
-      - mkdir -p output/templates
+      - echo "Preparing website artifact..."
       - mkdir -p output/app
-      - cp templates/*.yaml output/templates/
       - cp app/index.template.html output/app/index.html
-      - echo "Build stage complete."
+      - echo "index.html prepared."
+
+  post_build:
+    commands:
+      - echo "Packaging templates..."
+      - mkdir -p output/templates
+      - cp templates/*.yaml output/templates/
+      - echo "Build completed successfully."
 
 artifacts:
   files:

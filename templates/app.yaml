@@ -22,7 +22,7 @@ Parameters:
 
   ArtifactBucket:
     Type: String
-    Description: "S3 bucket containing build artifacts"
+    Description: "S3 bucket containing build artifacts (provided by pipeline)"
 
   ForceUpdate:
     Type: String
@@ -40,10 +40,13 @@ Conditions:
 
 Resources:
 
+  ###################################
+  # Security Group
+  ###################################
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow HTTP and SSH
+      GroupDescription: Allow HTTP and SSH traffic
       VpcId: !ImportValue
         Fn::Sub: "${EnvName}-VpcId"
       SecurityGroupIngress:
@@ -56,6 +59,9 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
 
+  ###################################
+  # EC2 Instance
+  ###################################
   AppInstance:
     Type: AWS::EC2::Instance
     Properties:
@@ -65,12 +71,20 @@ Resources:
         - !Ref AmiId
         - !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
       KeyName: !Ref KeyName
+
       SubnetId: !Select
         - 0
-        - !Split [",", !ImportValue !Sub "${EnvName}-PublicSubnets"]
+        - !Split
+          - ","
+          - !ImportValue
+              Fn::Sub: "${EnvName}-PublicSubnets"
+
       SecurityGroupIds:
         - !Ref AppSecurityGroup
 
+      ############################################
+      # USER DATA — INSTALL APACHE & COPY WEBSITE
+      ############################################
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -80,11 +94,17 @@ Resources:
           systemctl start httpd
           systemctl enable httpd
 
+          # Create directory
           mkdir -p /opt/app
+
+          # Download file from S3 artifact bucket
           aws s3 cp s3://${ArtifactBucket}/app/index.html /opt/app/index.html
 
+          # Move to Apache directory
           cp /opt/app/index.html /var/www/html/index.html
           chmod 644 /var/www/html/index.html
+
+          echo "Deployment completed"
 
       Tags:
         - Key: Name
