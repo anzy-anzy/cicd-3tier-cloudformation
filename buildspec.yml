@@ -17,14 +17,12 @@ phases:
 
   build:
     commands:
-      - echo "All templates validated successfully."
-
-  post_build:
-    commands:
-      - echo "Packaging templates into output directory..."
+      - echo "Packaging application files..."
       - mkdir -p output/templates
+      - mkdir -p output/app
       - cp templates/*.yaml output/templates/
-      - echo "Build completed successfully."
+      - cp app/index.template.html output/app/index.html
+      - echo "Build stage complete."
 
 artifacts:
   files:

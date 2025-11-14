@@ -1,13 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   EC2 Application Stack for 3-tier CI/CD Project.
-  Deploys EC2, installs Apache, and loads webpage from GitHub repo.
+  Deploys EC2 instance, installs Apache, pulls index.html from S3.
 
 Parameters:
   EnvName:
     Type: String
     Default: DEV
-    Description: Environment name (DEV, TEST, PROD)
 
   InstanceType:
     Type: String
@@ -20,7 +19,10 @@ Parameters:
   AmiId:
     Type: String
     Default: ""
-    Description: "Optional — leave empty to auto-select AMI based on region"
+
+  ArtifactBucket:
+    Type: String
+    Description: "S3 bucket containing build artifacts"
 
   ForceUpdate:
     Type: String
@@ -38,9 +40,6 @@ Conditions:
 
 Resources:
 
-  ##############################################
-  # Security Group
-  ##############################################
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -56,13 +55,7 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-      Tags:
-        - Key: Name
-          Value: !Sub "${EnvName}-AppSecurityGroup"
 
-  ##############################################
-  # EC2 Instance
-  ##############################################
   AppInstance:
     Type: AWS::EC2::Instance
     Properties:
@@ -74,39 +67,24 @@ Resources:
       KeyName: !Ref KeyName
       SubnetId: !Select
         - 0
-        - !Split
-          - ","
-          - !ImportValue
-              Fn::Sub: "${EnvName}-PublicSubnets"
+        - !Split [",", !ImportValue !Sub "${EnvName}-PublicSubnets"]
       SecurityGroupIds:
         - !Ref AppSecurityGroup
 
-      ##############################################
-      # UserData: Deploy real website from GitHub
-      ##############################################
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
           yum update -y
-
-          # Install Apache + Git
-          yum install -y httpd git
+          yum install -y httpd awscli
 
           systemctl start httpd
           systemctl enable httpd
 
-          # Clone the repo
-          cd /tmp
-          git clone https://github.com/anzy-anzy/cicd-3tier-cloudformation.git
+          mkdir -p /opt/app
+          aws s3 cp s3://${ArtifactBucket}/app/index.html /opt/app/index.html
 
-          # Copy the actual index file
-          cp /tmp/cicd-3tier-cloudformation/app/index.template.html /var/www/html/index.html
-
-          # Set permissions
+          cp /opt/app/index.html /var/www/html/index.html
           chmod 644 /var/www/html/index.html
-
-          # Restart Apache
-          systemctl restart httpd
 
       Tags:
         - Key: Name
@@ -124,11 +102,3 @@ Outputs:
     Value: !Ref AppSecurityGroup
     Export:
       Name: !Sub "${EnvName}-AppSecurityGroupId"
-
-  PublicSubnetUsed:
-    Value: !Select
-      - 0
-      - !Split
-        - ","
-        - !ImportValue
-            Fn::Sub: "${EnvName}-PublicSubnets"
