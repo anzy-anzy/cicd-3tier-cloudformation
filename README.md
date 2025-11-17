@@ -9,8 +9,7 @@ Production (us-west-2)
 The entire deployment is driven by AWS CodePipeline, CodeBuild, CloudFormation, S3, and EC2, with automated validation, artifact packaging, and multi-region orchestration.
 
 ### 🏗️ Architecture Overview
-<img width="1452" height="884" alt="Screenshot (1069)" src="https://github.com/user-attachments/assets/efcce4ba-d857-424e-a84c-506e5882fbf9" />
-
+<img width="1423" height="910" alt="EBSIY ANSLEM drawio (2)" src="https://github.com/user-attachments/assets/56ff1bc6-c486-47e4-96d7-f718c8c62a07" />
 
 ## The system follows a standard 3-tier model:
 
