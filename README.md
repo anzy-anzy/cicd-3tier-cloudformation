@@ -1,6 +1,6 @@
 # 🚀 Multi-Region 3-Tier Application Deployment Using AWS CloudFormation & CodePipeline
 
-## This repository contains the complete implementation of a fully automated multi-region CI/CD pipeline that deploys a 3-tier architecture (VPC → RDS → EC2 Web App) to two AWS regions:
+## This repository contains the complete implementation of a fully automated multi-region CI/CD pipeline that deploys a 3-tier architecture using a costom VPC (VPC → RDS → EC2 Web App) to two AWS regions:
 
 Development (us-east-1)
 
@@ -9,7 +9,8 @@ Production (us-west-2)
 The entire deployment is driven by AWS CodePipeline, CodeBuild, CloudFormation, S3, and EC2, with automated validation, artifact packaging, and multi-region orchestration.
 
 ### 🏗️ Architecture Overview
-✔ 3-Tier Architecture
+<img width="1452" height="884" alt="Screenshot (1069)" src="https://github.com/user-attachments/assets/efcce4ba-d857-424e-a84c-506e5882fbf9" />
+
 
 ## The system follows a standard 3-tier model:
 
